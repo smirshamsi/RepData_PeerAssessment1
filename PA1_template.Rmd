@@ -1,20 +1,65 @@
-# Reproducible Research: Peer Assessment 1
+Reproducible Reserach Assignment 1
+========================================================
+
+Loading Data into R, checking for column names, transfering date column to the POSIX format;
+
+```{r load_data}
+setwd("~/Dropbox/mine/My_Coursera/Reproducible_Reserach_Assignment_1/")
+data<-read.csv("activity.csv")
+names(data)
+```
+
+Part1: What is mean total number of steps taken per day?
+
+In this step, first the data will be subset to small chunks per each day, then mean and median of each subset will be calculated. At the end, meanPerDay and medianPerDay variables show mean and median value for each day.
+
+```{r mean_per_day}
+days <- seq(from=as.Date("2012-10-01"), to=as.Date("2012-11-30"),by='days' )
+
+stepsMean<-vector("numeric",length=length(days))
+stepsMedian<-vector("numeric",length=length(days))
+totalSteps<-vector("numeric",length=length(days))
+for(i in seq_along(days)){
+        b<-subset(data, as.Date(data$date, format='%Y-%m-%d')==days[i])
+        stepsMean[i]<-mean(as.numeric(b$steps), na.rm=TRUE)
+        stepsMedian[i]<-median(as.numeric(b$steps), na.rm=TRUE)
+        totalSteps[i]<-sum(as.numeric(b$steps), na.rm=TRUE)
+}
+
+plot(days,totalSteps)
+lines(days,totalSteps)
+meanPerDay<-cbind(as.character(days),as.character(stepsMean))
+medianPerDay<-cbind(as.character(days),as.character(stepsMedian))
+print(meanPerDay)
+print(medianPerDay)
+```
+
+Part2: What is the average daily activity pattern?
+
+In this step, first the data will be subset to small chunks per each 5 minutes interval, then mean of each subset will be calculated. 
+
+```{r average_daily_activity}
+#time<-seq(from=0,to=2400,by=5)
+start.date <- '2012-10-01'
+start.time <- '10:00:00'
+interval <- 5
+increment.mins <- interval * 60 
+x <- paste(start.date, start.time)
+time<-vector()
+
+for(i in 1:167) { 
+  temp<-strftime(strptime(x, format="%Y-%m-%d %H:%M:%S")+ i*increment.mins,"%H%M")
+  time<-rbind(time,temp)
+  }
 
 
-## Loading and preprocessing the data
+intervalMean<-vector("numeric",length=length(time))
+for (i in seq_along(time)){
+        c<-subset(data, as.numeric(data$interval)==time[i])
+        intervalMean[i]<-mean(c$steps,na.rm=TRUE)
+}
+print(intervalMean)
 
+plot(strptime(time,format="%H%M"),intervalMean,type="l",xlab="time",ylab="Mean of Interval")
+```
 
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
