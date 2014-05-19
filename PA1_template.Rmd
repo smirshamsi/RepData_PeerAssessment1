@@ -4,7 +4,7 @@ Reproducible Reserach Assignment 1
 Loading Data into R, checking for column names, transfering date column to the POSIX format;
 
 ```{r load_data}
-setwd("~/Dropbox/mine/My_Coursera/Reproducible_Reserach_Assignment_1/")
+setwd("~/Dropbox/mine/My_Coursera/Reproducible_Reserach_Assignment_1/RepData_PeerAssessment1/")
 data<-read.csv("activity.csv")
 names(data)
 ```
@@ -36,30 +36,97 @@ print(medianPerDay)
 
 Part2: What is the average daily activity pattern?
 
-In this step, first the data will be subset to small chunks per each 5 minutes interval, then mean of each subset will be calculated. 
+In this step, first the data will be subset to small chunks per each 5 minutes interval of all days collectively, then mean of each subset will be calculated. and plot of mean of nterval versus time interval will be made. 
 
 ```{r average_daily_activity}
 #time<-seq(from=0,to=2400,by=5)
 start.date <- '2012-10-01'
-start.time <- '10:00:00'
+start.time <- '00:00:00'
 interval <- 5
 increment.mins <- interval * 60 
 x <- paste(start.date, start.time)
 time<-vector()
 
-for(i in 1:167) { 
+for(i in 1:288) { 
   temp<-strftime(strptime(x, format="%Y-%m-%d %H:%M:%S")+ i*increment.mins,"%H%M")
-  time<-rbind(time,temp)
+  time[i] <- temp
   }
 
 
 intervalMean<-vector("numeric",length=length(time))
 for (i in seq_along(time)){
-        c<-subset(data, as.numeric(data$interval)==time[i])
+        c<-subset(data, as.numeric(data$interval)==as.numeric(time[i]))
         intervalMean[i]<-mean(c$steps,na.rm=TRUE)
 }
 print(intervalMean)
 
-plot(strptime(time,format="%H%M"),intervalMean,type="l",xlab="time",ylab="Mean of Interval")
+plot(strptime(time,format="%H%M"),intervalMean,type="l",xlab="time",ylab="Mean of Steps")
 ```
 
+According to this plot, `r strftime(strptime(time[which(intervalMean==max(intervalMean))],format='%H%M'),format='%H:%M')` interval has the maximum average of steps over all days.
+
+
+Part3: Imputing missing values
+
+number of rows with a missing value (i.e. NAs) is `r length(which(is.na(data$steps)))`
+
+In this part, first rows of data with a missing value are detected, then they are replaced by mean of that interval over all other days and produce a new data set.
+
+Then the new data will be subsetized for each day separately and mean and median of data over each day will be calculated.
+
+
+```{r Imputing_missing_values}
+index<-which(is.na(data$steps))
+new_data<-data
+for (i in index){
+        new_data$steps[i]<-intervalMean[which(as.numeric(time)==new_data$interval[i])]
+}
+
+stepsMeanNew<-vector("numeric",length=length(days))
+stepsMedianNew<-vector("numeric",length=length(days))
+totalStepsNew<-vector("numeric",length=length(days))
+
+for(i in seq_along(days)){
+        b<-subset(new_data, as.Date(new_data$date, format='%Y-%m-%d')==days[i])
+        stepsMeanNew[i]<-mean(as.numeric(b$steps), na.rm=TRUE)
+        stepsMedianNew[i]<-median(as.numeric(b$steps), na.rm=TRUE)
+        totalStepsNew[i]<-sum(as.numeric(b$steps), na.rm=TRUE)
+}
+
+plot(days,totalStepsNew)
+lines(days,totalStepsNew)
+meanPerDayNew<-cbind(as.character(days),as.character(stepsMeanNew))
+medianPerDayNew<-cbind(as.character(days),as.character(stepsMedianNew))
+print(meanPerDayNew)
+print(medianPerDayNew)
+```
+
+
+In this step, days of data will be labled as weekdays or weekends, then data will be subsetized to two groups of weekdays and weekends. The each of these groups will be subsetized separately to groups with the same five minute time interval, average of steps over each interval will be calculated and then will be plotted.
+
+```{r}
+new_data$weekDays<-weekdays(strptime(new_data$date, format='%Y-%m-%d'))
+weekday_level<-c("Monday","Tuesday","Wednesday","Thursday","Friday")
+weekends_level<-c("Saturday","Sunday")
+new_data$weekdays_lable<-factor(new_data$weekDays,levels=c(weekday_level,weekends_level),labels=c("Weekday","Weekday","Weekday","Weekday","Weekday","Weekend","Weekend"))
+
+new_data_weekdays<-subset(new_data,new_data$weekdays_lable=="Weekday")
+new_data_weekend<-subset(new_data,new_data$weekdays_lable=="Weekend")
+
+intervalMeanWeekdays<-vector("numeric",length=length(time))
+for (i in seq_along(time)){
+        c<-subset(new_data_weekdays, as.numeric(new_data_weekdays$interval)==as.numeric(time[i]))
+        intervalMeanWeekdays[i]<-mean(c$steps,na.rm=TRUE)
+}
+
+
+intervalMeanWeekends<-vector("numeric",length=length(time))
+for (i in seq_along(time)){
+        c<-subset(new_data_weekend, as.numeric(new_data_weekend$interval)==as.numeric(time[i]))
+        intervalMeanWeekends[i]<-mean(c$steps,na.rm=TRUE)
+}
+
+par(mfrow=c(2,1))
+plot(strptime(time,format="%H%M"),intervalMeanWeekends,type="l",xlab="time",ylab="Mean of Steps",main="Weekend")
+plot(strptime(time,format="%H%M"),intervalMeanWeekdays,type="l",xlab="time",ylab="Mean of Steps",main="Weekdays")
+```
